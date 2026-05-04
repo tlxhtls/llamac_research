@@ -4,6 +4,20 @@ This page records the public commands for reproducing the first modeling stage:
 source-notebook-style LightGBM features, PPG-only features, grouped metrics, and
 Optuna model alternatives.
 
+## Notebook-first reproduction
+
+Use the notebooks when the goal is human inspection and stepwise reproduction.
+They expose the same implementation as functional code cells rather than hidden
+CLI calls, so each stage can be reviewed and executed independently:
+
+- `notebooks/02_lightgbm_baselines.ipynb` — original all-channel LightGBM
+  checks plus the PPG-only LightGBM baseline.
+- `notebooks/03_ppg_alternative_models_optuna.ipynb` — PPG-only alternative
+  models and Optuna-locked comparisons.
+
+The CLI commands below are automation equivalents for batch runs, smoke tests,
+and CI-style validation.
+
 ## 1. Prepare data
 
 ```bash

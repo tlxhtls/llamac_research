@@ -190,7 +190,17 @@ The notebook expects `data/processed/dataset_index.csv`, which is created by `uv
 
 ## Modeling workflow
 
-Reusable modeling code now lives under `src/llamac_research/` with CLI entry points in `scripts/`:
+The primary human-inspection workflow is notebook-first. These notebooks expand
+the implementation into functional code cells so each stage can be read, edited,
+and rerun independently instead of shelling out to CLI commands:
+
+- `notebooks/02_lightgbm_baselines.ipynb` reproduces the original all-channel
+  LightGBM checks and the PPG-only LightGBM baseline in one inspectable flow.
+- `notebooks/03_ppg_alternative_models_optuna.ipynb` runs the PPG-only
+  alternative model and Optuna comparison in a separate inspectable flow.
+
+The same reusable modeling code also lives under `src/llamac_research/` with
+CLI entry points in `scripts/` for automation and smoke tests:
 
 - `scripts/build_features.py` builds official-notebook-style all-channel or PPG-only trial features.
 - `scripts/train_model.py` evaluates LightGBM and classical baselines with grouped or paper-style CV.

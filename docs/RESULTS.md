@@ -3,6 +3,13 @@
 Generated locally on 2026-05-05 from LLaMAC Figshare v6 prepared under ignored `data/` paths.
 Raw result JSON files and Optuna SQLite studies are intentionally ignored under `artifacts/`.
 
+Inspectable notebook entry points:
+
+- `notebooks/02_lightgbm_baselines.ipynb` for original all-channel and PPG-only
+  LightGBM baseline reproduction.
+- `notebooks/03_ppg_alternative_models_optuna.ipynb` for PPG-only alternative
+  model and Optuna comparisons.
+
 ## Interpretation caveats
 
 - **Grouped CV is the primary public benchmark** because it prevents participant leakage.
