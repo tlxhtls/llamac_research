@@ -26,6 +26,34 @@ llamac_research/
 └── notebooks/        # analysis notebooks
 ```
 
+## Environment
+
+This project uses `uv` and pins Python 3.12 via `.python-version` and `pyproject.toml`.
+
+Create or update the project environment:
+
+```bash
+uv sync
+```
+
+Run Python commands inside the fixed environment:
+
+```bash
+uv run python --version
+```
+
+Expected Python version:
+
+```text
+Python 3.12.x
+```
+
+For later modeling work, optional ML dependencies can be installed with:
+
+```bash
+uv sync --group ml
+```
+
 ## Downloading and preparing the dataset
 
 The downloader uses the Figshare API and Python standard library only. It writes a reproducible manifest, verifies file size and MD5 checksums by default, and can prepare extracted files for analysis.
@@ -33,7 +61,7 @@ The downloader uses the Figshare API and Python standard library only. It writes
 From the repository root, run the full download + analysis preparation:
 
 ```bash
-python scripts/download_llamac.py --prepare
+uv run python scripts/download_llamac.py --prepare
 ```
 
 This downloads all Figshare v6 files into `data/raw/`, extracts participant zip files into `data/extracted/`, and creates:
@@ -47,7 +75,7 @@ Expected total download size is about 3.1 GB. Extracted files require additional
 ### Smoke test: download only metadata
 
 ```bash
-python scripts/download_llamac.py --manifest-only
+uv run python scripts/download_llamac.py --manifest-only
 ```
 
 This creates:
@@ -61,19 +89,19 @@ data/raw/llamac_figshare_manifest.json
 Download the first three files selected by natural filename order:
 
 ```bash
-python scripts/download_llamac.py --limit 3
+uv run python scripts/download_llamac.py --limit 3
 ```
 
 Download exact files:
 
 ```bash
-python scripts/download_llamac.py --name 1.zip --name 2025_Kitech_Emotion_Data_Code.ipynb
+uv run python scripts/download_llamac.py --name 1.zip --name 2025_Kitech_Emotion_Data_Code.ipynb
 ```
 
 Download by regex:
 
 ```bash
-python scripts/download_llamac.py --pattern '\.ipynb$|\.py$'
+uv run python scripts/download_llamac.py --pattern '\.ipynb$|\.py$'
 ```
 
 ### Parallelism
@@ -81,19 +109,19 @@ python scripts/download_llamac.py --pattern '\.ipynb$|\.py$'
 The default is 4 parallel downloads:
 
 ```bash
-python scripts/download_llamac.py --workers 4
+uv run python scripts/download_llamac.py --workers 4
 ```
 
 Use fewer workers on unstable networks:
 
 ```bash
-python scripts/download_llamac.py --workers 1
+uv run python scripts/download_llamac.py --workers 1
 ```
 
 Use more workers if the connection is stable:
 
 ```bash
-python scripts/download_llamac.py --workers 8
+uv run python scripts/download_llamac.py --workers 8
 ```
 
 ### Resume behavior
@@ -101,13 +129,13 @@ python scripts/download_llamac.py --workers 8
 The script is safe to re-run. Existing files are skipped when their size and MD5 match the Figshare metadata.
 
 ```bash
-python scripts/download_llamac.py
+uv run python scripts/download_llamac.py
 ```
 
 To force re-download:
 
 ```bash
-python scripts/download_llamac.py --force
+uv run python scripts/download_llamac.py --force
 ```
 
 ### Extract and prepare later
@@ -115,21 +143,21 @@ python scripts/download_llamac.py --force
 If the raw zip files are already downloaded, rerun the script with `--prepare`. Completed files are skipped, then the archives are extracted and indexed:
 
 ```bash
-python scripts/download_llamac.py --prepare
+uv run python scripts/download_llamac.py --prepare
 ```
 
 To force re-extraction:
 
 ```bash
-python scripts/download_llamac.py --prepare --force-extract
+uv run python scripts/download_llamac.py --prepare --force-extract
 ```
 
 ## EDA notebook
 
-Install minimal analysis dependencies:
+Launch JupyterLab through `uv` so it uses the project environment:
 
 ```bash
-python -m pip install -r requirements.txt
+uv run jupyter lab
 ```
 
 Open the starter notebook:
@@ -138,7 +166,13 @@ Open the starter notebook:
 notebooks/01_llamac_eda.ipynb
 ```
 
-The notebook expects `data/processed/dataset_index.csv`, which is created by `python scripts/download_llamac.py --prepare`.
+The notebook kernelspec is fixed to:
+
+```text
+Python 3.12 (llamac-research)
+```
+
+The notebook expects `data/processed/dataset_index.csv`, which is created by `uv run python scripts/download_llamac.py --prepare`.
 
 ## Data citation
 

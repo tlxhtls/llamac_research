@@ -1,0 +1,27 @@
+[project]
+name = "llamac-research"
+version = "0.1.0"
+description = "Research utilities and starter EDA for the LLaMAC affective computing dataset."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+authors = [
+  { name = "tlxhtls", email = "tlxhtls@gmail.com" }
+]
+dependencies = [
+  "ipykernel>=6.29",
+  "jupyterlab>=4.0",
+  "matplotlib>=3.8",
+  "pandas>=2.2",
+]
+
+[dependency-groups]
+ml = [
+  # Install later with: uv sync --group ml
+  # PyTorch supports Python 3.12 and can be added when modeling starts.
+  "torch>=2.6",
+  "scikit-learn>=1.5",
+]
+
+[tool.uv]
+package = false
