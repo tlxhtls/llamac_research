@@ -619,8 +619,26 @@ def _process_subject_worker(args: tuple[str, str]) -> pl.DataFrame:
 
 
 def discover_subject_dirs(data_root: str | Path, limit_subjects: int | None = None) -> list[Path]:
+    """Discover participant folders, including archives that extracted one level deep.
+
+    Most LLaMAC zip files extract directly to `data/extracted/<id>/answer.csv`,
+    but at least one archive can appear as `data/extracted/<id>/<id>/answer.csv`.
+    The feature builder treats the directory containing `answer.csv` as the
+    participant directory and de-duplicates by resolved path.
+    """
     root = Path(data_root)
-    subject_dirs = [p for p in root.iterdir() if p.is_dir() and (p / "answer.csv").is_file()]
+    subject_dirs: list[Path] = []
+    seen: set[Path] = set()
+    for answer_path in root.glob("*/answer.csv"):
+        parent = answer_path.parent.resolve()
+        if parent not in seen:
+            seen.add(parent)
+            subject_dirs.append(answer_path.parent)
+    for answer_path in root.glob("*/*/answer.csv"):
+        parent = answer_path.parent.resolve()
+        if parent not in seen:
+            seen.add(parent)
+            subject_dirs.append(answer_path.parent)
     subject_dirs = sorted(subject_dirs, key=natural_key)
     if limit_subjects is not None:
         subject_dirs = subject_dirs[:limit_subjects]

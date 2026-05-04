@@ -40,3 +40,13 @@ def test_build_ppg_feature_table(tmp_path: Path) -> None:
     assert "ReportedType" in frame.columns
     assert any(c.startswith("Band_PPG_") for c in frame.columns)
     assert not any(c.startswith("Band_GSR_") for c in frame.columns)
+
+
+def test_discover_nested_extracted_subject(tmp_path: Path) -> None:
+    # Some Figshare archives extract as data/extracted/<id>/<id>/answer.csv.
+    nested_root = tmp_path / "outer"
+    _write_subject(nested_root, 9)
+    frame, summary = build_feature_table(tmp_path, mode="ppg")
+    assert summary.participants == 1
+    assert summary.rows == 5
+    assert set(frame["SubjectID"].to_list()) == {"9"}

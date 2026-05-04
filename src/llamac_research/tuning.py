@@ -50,7 +50,7 @@ def sample_model_params(trial: Any, model_name: str) -> dict[str, Any]:
     if model_name == "logistic_regression":
         return {
             "C": trial.suggest_float("C", 1e-3, 100.0, log=True),
-            "solver": trial.suggest_categorical("solver", ["lbfgs", "liblinear"]),
+            "solver": "lbfgs",
         }
     if model_name == "svc_rbf":
         return {

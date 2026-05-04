@@ -252,7 +252,7 @@ def create_estimator(
         from sklearn.pipeline import make_pipeline
         from sklearn.preprocessing import StandardScaler
 
-        base = {"max_iter": 2000, "class_weight": "balanced", "random_state": seed, "n_jobs": 1}
+        base = {"max_iter": 2000, "class_weight": "balanced", "random_state": seed}
         base.update(params)
         return make_pipeline(StandardScaler(), LogisticRegression(**base))
 

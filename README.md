@@ -197,7 +197,7 @@ Reusable modeling code now lives under `src/llamac_research/` with CLI entry poi
 - `scripts/tune_models.py` runs Optuna studies for promising model families.
 - `scripts/summarize_results.py` converts result JSON files into a compact comparison table.
 
-For the full reproducible workflow, see [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md). Generated feature tables, Optuna studies, model outputs, and result JSON files stay under ignored `data/processed/` and `artifacts/` paths.
+For the full reproducible workflow, see [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md). Current compact benchmark results are in [`docs/RESULTS.md`](docs/RESULTS.md). Generated feature tables, Optuna studies, model outputs, and result JSON files stay under ignored `data/processed/` and `artifacts/` paths.
 
 ## Data citation
 
