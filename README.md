@@ -54,6 +54,18 @@ For later modeling work, optional ML dependencies can be installed with:
 uv sync --group ml
 ```
 
+## Acceleration and tabular processing
+
+The repository is CPU-compatible by default, but modeling and larger EDA code should prefer GPU acceleration when available.
+
+- Tabular inspection/preprocessing should use **Polars** first, especially lazy `scan_*` workflows.
+- Public scripts should use a device option such as `--device auto|cuda|cpu`; `auto` should prefer CUDA and fall back to CPU.
+- Optional Polars GPU execution can be used on supported NVIDIA/CUDA systems with `collect(engine="gpu")`, but CPU Polars must remain the portable fallback.
+- DNN waveform/image models should use PyTorch CUDA when available and keep CPU smoke tests for researchers without GPUs.
+- LightGBM GPU/CUDA support depends on the installed build, so CPU LightGBM remains the baseline reproduction path unless GPU support is verified.
+
+For local CUDA setup, use the current official PyTorch/Polars/LightGBM/XGBoost installation guides instead of hardcoding workstation-specific wheel URLs into this public repo.
+
 ## Downloading and preparing the dataset
 
 The downloader uses the Figshare API and Python standard library only. It writes a reproducible manifest, verifies file size and MD5 checksums by default, and can prepare extracted files for analysis.
@@ -173,6 +185,19 @@ Python 3.12 (llamac-research)
 ```
 
 The notebook expects `data/processed/dataset_index.csv`, which is created by `uv run python scripts/download_llamac.py --prepare`.
+
+
+
+## Modeling workflow
+
+Reusable modeling code now lives under `src/llamac_research/` with CLI entry points in `scripts/`:
+
+- `scripts/build_features.py` builds official-notebook-style all-channel or PPG-only trial features.
+- `scripts/train_model.py` evaluates LightGBM and classical baselines with grouped or paper-style CV.
+- `scripts/tune_models.py` runs Optuna studies for promising model families.
+- `scripts/summarize_results.py` converts result JSON files into a compact comparison table.
+
+For the full reproducible workflow, see [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md). Generated feature tables, Optuna studies, model outputs, and result JSON files stay under ignored `data/processed/` and `artifacts/` paths.
 
 ## Data citation
 

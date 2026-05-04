@@ -23,6 +23,40 @@ data/processed/*
 !data/extracted/.gitkeep
 !data/processed/.gitkeep
 
+
+# Local agent/orchestration/private work files (never publish)
+AGENTS.md
+AGENTS.local.md
+CLAUDE.md
+CLAUDE.local.md
+GEMINI.md
+GEMINI.local.md
+.omx/
+.codex/
+.agents/
+*.local.md
+local-notes/
+private-notes/
+docs/private/
+docs/local/
+
+# Generated ML/research artifacts
+artifacts/
+outputs/
+runs/
+models/
+checkpoints/
+mlruns/
+wandb/
+lightning_logs/
+*.ckpt
+*.pt
+*.pth
+*.onnx
+optuna*.db
+*.sqlite
+*.sqlite3
+
 # Logs and partial downloads
 *.log
 *.part
