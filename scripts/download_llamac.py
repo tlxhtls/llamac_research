@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures as futures
+import csv
 import hashlib
 import json
 import os
@@ -177,8 +178,21 @@ def write_manifest(metadata: dict, out_dir: Path, files: list[FigshareFile]) -> 
     return path
 
 
-def extract_archives(out_dir: Path, files: Iterable[FigshareFile], extract_dir: Path) -> None:
+def safe_zip_members(zf: zipfile.ZipFile) -> list[zipfile.ZipInfo]:
+    """Return zip members after blocking absolute paths and path traversal."""
+    members: list[zipfile.ZipInfo] = []
+    for info in zf.infolist():
+        member_path = Path(info.filename)
+        if member_path.is_absolute() or ".." in member_path.parts:
+            raise ValueError(f"Unsafe zip member path: {info.filename}")
+        members.append(info)
+    return members
+
+
+def extract_archives(out_dir: Path, files: Iterable[FigshareFile], extract_dir: Path, force: bool = False) -> list[Path]:
+    """Extract downloaded participant zip files into one folder per zip stem."""
     extract_dir.mkdir(parents=True, exist_ok=True)
+    extracted_dirs: list[Path] = []
     for file in files:
         if not file.name.lower().endswith(".zip"):
             continue
@@ -187,10 +201,52 @@ def extract_archives(out_dir: Path, files: Iterable[FigshareFile], extract_dir: 
             print(f"[extract skip] missing {archive}")
             continue
         target = extract_dir / archive.stem
+        marker = target / ".extracted_ok"
+        if marker.exists() and not force:
+            print(f"[extract skipped] {archive.name} -> {target}")
+            extracted_dirs.append(target)
+            continue
         target.mkdir(parents=True, exist_ok=True)
         print(f"[extract] {archive.name} -> {target}")
         with zipfile.ZipFile(archive) as zf:
+            safe_zip_members(zf)
             zf.extractall(target)
+        marker.write_text(time.strftime("%Y-%m-%d %H:%M:%S %Z"), encoding="utf-8")
+        extracted_dirs.append(target)
+    return extracted_dirs
+
+
+def build_dataset_index(extract_dir: Path, index_path: Path) -> Path:
+    """Create a compact CSV index of extracted files for analysis notebooks."""
+    rows: list[dict[str, str | int]] = []
+    participant_dirs = sorted([p for p in extract_dir.iterdir() if p.is_dir()], key=lambda p: natural_key(p.name)) if extract_dir.exists() else []
+    for participant_dir in participant_dirs:
+        for path in sorted(participant_dir.rglob("*"), key=lambda p: natural_key(str(p.relative_to(participant_dir)))):
+            if not path.is_file() or path.name == ".extracted_ok":
+                continue
+            relative_path = path.relative_to(extract_dir)
+            rows.append(
+                {
+                    "participant_id": participant_dir.name,
+                    "file_name": path.name,
+                    "relative_path": str(relative_path),
+                    "suffix": path.suffix.lower(),
+                    "size_bytes": path.stat().st_size,
+                }
+            )
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    with index_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["participant_id", "file_name", "relative_path", "suffix", "size_bytes"])
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"[index] {index_path} ({len(rows)} files)")
+    return index_path
+
+
+def prepare_analysis_data(out_dir: Path, selected: list[FigshareFile], extract_dir: Path, force_extract: bool = False) -> Path:
+    """Unzip data and write an index consumed by the EDA notebook."""
+    extract_archives(out_dir, selected, extract_dir, force=force_extract)
+    return build_dataset_index(extract_dir, Path("data/processed/dataset_index.csv"))
 
 
 def parse_args() -> argparse.Namespace:
@@ -208,6 +264,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--force", action="store_true", help="Re-download even when an existing file passes size/MD5 checks")
     parser.add_argument("--manifest-only", action="store_true", help="Only write metadata manifest; do not download files")
     parser.add_argument("--extract", action="store_true", help="Extract downloaded zip files after download")
+    parser.add_argument("--prepare", action="store_true", help="After download, extract zip files and build data/processed/dataset_index.csv")
+    parser.add_argument("--force-extract", action="store_true", help="Re-extract zip files even when .extracted_ok markers exist")
     parser.add_argument("--extract-dir", type=Path, default=Path("data/extracted"), help="Extraction directory. Default: %(default)s")
     return parser.parse_args()
 
@@ -259,8 +317,10 @@ def main() -> int:
         print(f"Failed list written to {args.out_dir / 'failed_downloads.json'}", file=sys.stderr)
         return 1
 
-    if args.extract:
-        extract_archives(args.out_dir, selected, args.extract_dir)
+    if args.prepare:
+        prepare_analysis_data(args.out_dir, selected, args.extract_dir, force_extract=args.force_extract)
+    elif args.extract:
+        extract_archives(args.out_dir, selected, args.extract_dir, force=args.force_extract)
 
     return 0
 

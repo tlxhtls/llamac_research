@@ -26,23 +26,23 @@ llamac_research/
 └── notebooks/        # analysis notebooks
 ```
 
-## Downloading the dataset
+## Downloading and preparing the dataset
 
-The downloader uses the Figshare API and Python standard library only. It writes a reproducible manifest and verifies file size and MD5 checksums by default.
+The downloader uses the Figshare API and Python standard library only. It writes a reproducible manifest, verifies file size and MD5 checksums by default, and can prepare extracted files for analysis.
 
-From the repository root:
+From the repository root, run the full download + analysis preparation:
 
 ```bash
-python scripts/download_llamac.py
+python scripts/download_llamac.py --prepare
 ```
 
-This downloads all Figshare v6 files into:
+This downloads all Figshare v6 files into `data/raw/`, extracts participant zip files into `data/extracted/`, and creates:
 
 ```text
-data/raw/
+data/processed/dataset_index.csv
 ```
 
-Expected total download size is about 3.1 GB.
+Expected total download size is about 3.1 GB. Extracted files require additional disk space.
 
 ### Smoke test: download only metadata
 
@@ -110,23 +110,35 @@ To force re-download:
 python scripts/download_llamac.py --force
 ```
 
-### Extract downloaded zip files
+### Extract and prepare later
+
+If the raw zip files are already downloaded, rerun the script with `--prepare`. Completed files are skipped, then the archives are extracted and indexed:
 
 ```bash
-python scripts/download_llamac.py --extract
+python scripts/download_llamac.py --prepare
 ```
 
-By default, zip files are extracted into:
+To force re-extraction:
+
+```bash
+python scripts/download_llamac.py --prepare --force-extract
+```
+
+## EDA notebook
+
+Install minimal analysis dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Open the starter notebook:
 
 ```text
-data/extracted/
+notebooks/01_llamac_eda.ipynb
 ```
 
-You can choose another extraction directory:
-
-```bash
-python scripts/download_llamac.py --extract --extract-dir /path/to/extracted_llamac
-```
+The notebook expects `data/processed/dataset_index.csv`, which is created by `python scripts/download_llamac.py --prepare`.
 
 ## Data citation
 
