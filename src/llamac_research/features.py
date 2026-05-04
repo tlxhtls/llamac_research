@@ -32,7 +32,7 @@ try:  # SciPy is a declared dependency, but keep import-time failure readable.
 except Exception:  # pragma: no cover - only hit in broken environments
     SCIPY_OK = False
 
-FeatureMode = Literal["all", "ppg"]
+FeatureMode = Literal["all", "ppg", "ppg_rich"]
 
 PPG_MIN_DIST_SEC = 0.35
 RESP_MIN_DIST_SEC = 1.0
@@ -372,7 +372,7 @@ def line_length(values: Any) -> float:
     return float(np.sum(np.abs(np.diff(x))))
 
 
-def _ppg_features(df: pl.DataFrame, info: dict[str, Any]) -> None:
+def _ppg_features(df: pl.DataFrame, info: dict[str, Any], *, rich: bool = False) -> None:
     if "PPG" not in df.columns:
         return
     ppg = df["PPG"]
@@ -417,6 +417,72 @@ def _ppg_features(df: pl.DataFrame, info: dict[str, Any]) -> None:
     info["Band_PPG_slope"] = linear_slope(t_sec, ppg)
     info["Band_PPG_zcr"] = zcr(ppg)
 
+    if not rich:
+        return
+
+    # PPG-only extension: morphology, derivatives, frequency, and coarse temporal dynamics.
+    # These are excluded from `mode=all` so the all-channel feature table remains close to
+    # the official Figshare notebook baseline.
+    y_finite = y0[np.isfinite(y0)]
+    if y_finite.size >= 2:
+        info.update(robust_stats(np.diff(y_finite), "Band_PPG_diff"))
+    else:
+        info.update(robust_stats([], "Band_PPG_diff"))
+    if y_finite.size >= 3:
+        info.update(robust_stats(np.diff(y_finite, n=2), "Band_PPG_diff2"))
+    else:
+        info.update(robust_stats([], "Band_PPG_diff2"))
+
+    fs_val = float(fs) if fs is not None and np.isfinite(fs) and fs > 0 else 30.0
+    y_centered = interpolate_nans(y0 - np.nanmedian(y0)) if y0.size else y0
+    peaks = detect_peaks_adaptive(bandpass(y_centered, fs_val, low=0.5, high=8.0), fs_val, PPG_MIN_DIST_SEC, prom_frac=0.08)
+    info["Band_PPG_peak_count"] = int(peaks.size)
+    duration_s = info.get("Band_PPG_duration_s", math.nan)
+    info["Band_PPG_peak_rate_per_min"] = float(peaks.size * 60.0 / duration_s) if np.isfinite(duration_s) and duration_s > 0 else math.nan
+    if peaks.size and y0.size:
+        peak_values = y0[peaks]
+        info.update(robust_stats(peak_values, "Band_PPG_peak_value"))
+    else:
+        info.update(robust_stats([], "Band_PPG_peak_value"))
+
+    freq, pxx = _welch_psd(y_centered, fs_val)
+    total_power = safe_trapezoid(pxx, freq) if freq is not None and pxx is not None else math.nan
+    info["Band_PPG_total_power"] = float(total_power) if np.isfinite(total_power) else math.nan
+    for band_name, low, high in (
+        ("vlf", 0.04, 0.15),
+        ("lf", 0.15, 0.40),
+        ("resp", 0.40, 0.80),
+        ("cardiac_low", 0.80, 2.00),
+        ("cardiac_high", 2.00, 4.00),
+        ("motion", 4.00, 8.00),
+    ):
+        bp = band_power(freq, pxx, low, high)
+        info[f"Band_PPG_{band_name}_power_abs"] = bp
+        info[f"Band_PPG_{band_name}_power_rel"] = bp / total_power if np.isfinite(bp) and np.isfinite(total_power) and total_power > 0 else math.nan
+    if freq is not None and pxx is not None and pxx.size:
+        valid = np.isfinite(freq) & np.isfinite(pxx)
+        info["Band_PPG_dominant_hz"] = float(freq[valid][np.argmax(pxx[valid])]) if np.any(valid) else math.nan
+        info["Band_PPG_spec_entropy"] = spectral_entropy(freq, pxx)
+    else:
+        info["Band_PPG_dominant_hz"] = math.nan
+        info["Band_PPG_spec_entropy"] = math.nan
+
+    if y0.size >= 8:
+        edges = np.linspace(0, y0.size, 5, dtype=int)
+        for idx in range(4):
+            lo, hi = edges[idx], edges[idx + 1]
+            seg = y0[lo:hi]
+            seg_t = t_sec[lo:hi] if t_sec.size == y0.size else np.arange(seg.size, dtype=float)
+            finite_seg = seg[np.isfinite(seg)]
+            info[f"Band_PPG_seg{idx + 1}_mean"] = float(np.mean(finite_seg)) if finite_seg.size else math.nan
+            info[f"Band_PPG_seg{idx + 1}_std"] = float(np.std(finite_seg, ddof=1)) if finite_seg.size > 1 else (0.0 if finite_seg.size else math.nan)
+            info[f"Band_PPG_seg{idx + 1}_slope"] = linear_slope(seg_t, seg)
+    else:
+        for idx in range(4):
+            info[f"Band_PPG_seg{idx + 1}_mean"] = math.nan
+            info[f"Band_PPG_seg{idx + 1}_std"] = math.nan
+            info[f"Band_PPG_seg{idx + 1}_slope"] = math.nan
+
 
 def summarize_band_csv(path: str | Path, mode: FeatureMode = "all") -> dict[str, Any]:
     """Summarize one band_*.csv file."""
@@ -454,7 +520,7 @@ def summarize_band_csv(path: str | Path, mode: FeatureMode = "all") -> dict[str,
         info["Band_GSR_slope"] = linear_slope(df[gsr_tcol] if gsr_tcol else np.arange(df.height), df["GSR"])
         info["Band_GSR_zcr"] = zcr(df["GSR"])
 
-    _ppg_features(df, info)
+    _ppg_features(df, info, rich=(mode == "ppg_rich"))
 
     if mode == "all" and "SKT" in df.columns:
         info.update(robust_stats(df["SKT"], "Band_SKT"))
@@ -579,7 +645,7 @@ def process_subject(subject_dir: str | Path, mode: FeatureMode = "all") -> pl.Da
     subject_id = sdir.name
     answer = read_answer_csv(sdir, subject_id=subject_id)
     trial_map: dict[int, dict[str, list[Path]]] = {}
-    patterns = ["band_*.csv"] if mode == "ppg" else ["band_*.csv", "eeg_*.csv", "respiration_*.csv"]
+    patterns = ["band_*.csv"] if mode in {"ppg", "ppg_rich"} else ["band_*.csv", "eeg_*.csv", "respiration_*.csv"]
     for pattern in patterns:
         for path in sorted(sdir.glob(pattern), key=natural_key):
             trial = extract_trial_number(path)

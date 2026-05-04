@@ -50,3 +50,13 @@ def test_discover_nested_extracted_subject(tmp_path: Path) -> None:
     assert summary.participants == 1
     assert summary.rows == 5
     assert set(frame["SubjectID"].to_list()) == {"9"}
+
+
+def test_build_rich_ppg_adds_ppg_only_extensions(tmp_path: Path) -> None:
+    _write_subject(tmp_path, 1)
+    base, _ = build_feature_table(tmp_path, mode="ppg")
+    rich, _ = build_feature_table(tmp_path, mode="ppg_rich")
+    assert rich.width > base.width
+    assert "Band_PPG_diff_mean" in rich.columns
+    assert "Band_PPG_total_power" in rich.columns
+    assert not any(c.startswith("Band_GSR_") for c in rich.columns)

@@ -15,9 +15,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-root", default="data/extracted", help="Extracted LLaMAC participant directory root.")
     parser.add_argument(
         "--mode",
-        choices=["all", "ppg"],
+        choices=["all", "ppg", "ppg_rich"],
         default="all",
-        help="Feature mode: all biosignal modalities or PPG-derived features only.",
+        help="Feature mode: all biosignal modalities, base PPG, or rich PPG-only features.",
     )
     parser.add_argument("--output", default=None, help="Output CSV/parquet path.")
     parser.add_argument("--limit-subjects", type=int, default=None, help="Optional smoke-test participant limit.")

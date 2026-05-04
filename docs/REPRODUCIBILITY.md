@@ -49,6 +49,15 @@ uv run --group ml python scripts/build_features.py \
   --output data/processed/features_ppg.parquet
 ```
 
+Rich PPG-only feature table for tuned alternatives:
+
+```bash
+uv run --group ml python scripts/build_features.py \
+  --mode ppg_rich \
+  --workers 4 \
+  --output data/processed/features_ppg_rich.parquet
+```
+
 Smoke-test with only two participants:
 
 ```bash
