@@ -205,6 +205,13 @@ and rerun independently instead of shelling out to CLI commands:
 - `notebooks/03_ppg_alternative_models_optuna.ipynb` runs the PPG-only
   alternative model and Optuna comparison in a separate inspectable flow.
 
+Short Colab-oriented variants are also available when you want a smaller,
+Korean-commented workflow with built-in Figshare download/extraction cells and
+GPU-first `DEVICE="auto"` defaults:
+
+- `notebooks/02_lightgbm_baselines_short_colab.ipynb`
+- `notebooks/03_ppg_alternative_models_optuna_short_colab.ipynb`
+
 The same reusable modeling code also lives under `src/llamac_research/` with
 CLI entry points in `scripts/` for automation and smoke tests:
 
