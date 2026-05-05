@@ -172,11 +172,17 @@ Launch JupyterLab through `uv` so it uses the project environment:
 uv run jupyter lab
 ```
 
-Open the starter notebook:
+Open the Polars-first EDA notebook:
 
 ```text
 notebooks/01_llamac_eda.ipynb
 ```
+
+It checks extraction completeness, answer-label distributions, questionnaire
+correlations, intended-vs-reported emotion disagreement, and sampled biosignal
+sanity plots. Heatmaps are included for participant file completeness,
+Valence×Arousal counts, questionnaire correlations, and intended×reported
+emotion counts.
 
 The notebook kernelspec is fixed to:
 
