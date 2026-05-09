@@ -192,6 +192,18 @@ Python 3.12 (llamac-research)
 
 The notebook expects `data/processed/dataset_index.csv`, which is created by `uv run python scripts/download_llamac.py --prepare`.
 
+For a professor-facing Colab walkthrough, use:
+
+```text
+notebooks/00_llamac_dataset_professor_colab.ipynb
+```
+
+It is designed as a half-presentation, half-data-inspection notebook. It runs
+without cloning this repository in Colab, downloads/extracts the Figshare
+dataset directly, summarizes the original Scientific Data paper
+(`docs/41597_2025_Article_6165.pdf`), and inspects the actual answer/sensor CSV
+structure with styled tables and interactive Plotly views.
+
 
 
 ## Modeling workflow
