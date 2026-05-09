@@ -192,10 +192,10 @@ Python 3.12 (llamac-research)
 
 The notebook expects `data/processed/dataset_index.csv`, which is created by `uv run python scripts/download_llamac.py --prepare`.
 
-For a professor-facing Colab walkthrough, use:
+For a lab-meeting Colab walkthrough, use:
 
 ```text
-notebooks/00_llamac_dataset_professor_colab.ipynb
+notebooks/00_llamac_dataset_labmeeting_colab.ipynb
 ```
 
 It is designed as a half-presentation, half-data-inspection notebook. It runs
