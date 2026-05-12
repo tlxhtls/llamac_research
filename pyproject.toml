@@ -17,6 +17,7 @@ dependencies = [
   "polars>=1.40.1",
   "pyarrow>=24.0.0",
   "scipy>=1.14",
+  "seaborn>=0.13.2",
 ]
 
 [dependency-groups]
@@ -24,6 +25,7 @@ dev = [
   "pytest>=8.3",
 ]
 ml = [
+  "catboost>=1.2",
   # Install later with: uv sync --group ml
   "lightgbm>=4.5",
   "optuna>=4.0",
