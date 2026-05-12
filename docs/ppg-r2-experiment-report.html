@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LLaMAC PPG Emotion Regression R2 Report</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d242f;
+      --muted: #5b6472;
+      --line: #d8dee8;
+      --panel: #f7f9fc;
+      --accent: #175cd3;
+      --accent-soft: #e8f1ff;
+      --warn: #9a5b00;
+      --warn-soft: #fff5df;
+      --good: #126b3a;
+      --good-soft: #e7f7ee;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+      color: var(--ink);
+      background: #ffffff;
+    }
+    main {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 44px 0 64px;
+    }
+    header {
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 4vw, 3.3rem);
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 42px 0 14px;
+      padding-bottom: 8px;
+      font-size: 1.45rem;
+      border-bottom: 1px solid var(--line);
+    }
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 1.08rem;
+    }
+    p { margin: 0 0 14px; }
+    .lede {
+      max-width: 850px;
+      font-size: 1.08rem;
+      color: var(--muted);
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 11px;
+      color: var(--muted);
+      background: #fff;
+      font-size: 0.92rem;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin: 22px 0;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      background: var(--panel);
+    }
+    .metric strong {
+      display: block;
+      font-size: 1.55rem;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+    .metric span {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .callout {
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--accent);
+      border-radius: 8px;
+      padding: 16px 18px;
+      margin: 18px 0;
+      background: var(--accent-soft);
+    }
+    .callout.warn {
+      border-left-color: var(--warn);
+      background: var(--warn-soft);
+    }
+    .callout.good {
+      border-left-color: var(--good);
+      background: var(--good-soft);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 24px;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: right;
+      vertical-align: top;
+    }
+    th:first-child, td:first-child { text-align: left; }
+    th {
+      background: var(--panel);
+      font-weight: 700;
+    }
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+      background: #eef2f7;
+      padding: 0.12rem 0.35rem;
+      border-radius: 4px;
+    }
+    pre {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #101828;
+      color: #f8fafc;
+      line-height: 1.5;
+    }
+    pre code {
+      background: transparent;
+      padding: 0;
+      color: inherit;
+    }
+    ul {
+      margin: 8px 0 20px;
+      padding-left: 1.2rem;
+    }
+    li { margin: 4px 0; }
+    .small {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    @media (max-width: 820px) {
+      main { width: min(100% - 28px, 1120px); padding-top: 28px; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      table { font-size: 0.86rem; }
+      th, td { padding: 8px 6px; }
+    }
+    @media (max-width: 520px) {
+      .summary-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>LLaMAC PPG Emotion Regression R2 Report</h1>
+      <p class="lede">
+        PPG 단일 센서 rolling-window 피처로 연속형 감정 점수를 예측한 실험 요약입니다.
+        핵심 결론은 단순 window-random split에서는 R2가 높게 보이지만, trial 단위 누수를 제거한
+        정합 split에서는 ExtraTrees가 가장 좋았고 평균 test R2는 0.2083입니다.
+      </p>
+      <div class="meta">
+        <span class="pill">작성일: 2026-05-12</span>
+        <span class="pill">Dataset: LLaMAC Figshare v6</span>
+        <span class="pill">Sensor: PPG only</span>
+        <span class="pill">Runtime: Python 3.12 + uv</span>
+      </div>
+    </header>
+
+    <section>
+      <h2>Executive Summary</h2>
+      <div class="summary-grid">
+        <div class="metric">
+          <strong>0.2083</strong>
+          <span>정합 trial-group split 기준 test mean R2</span>
+        </div>
+        <div class="metric">
+          <strong>0.1566</strong>
+          <span>validation trial-level mean R2로 선택된 최고 점수</span>
+        </div>
+        <div class="metric">
+          <strong>0</strong>
+          <span>train / validation / test trial group overlap</span>
+        </div>
+        <div class="metric">
+          <strong>ExtraTrees</strong>
+          <span>RandomForest, GBM 계열 대비 최고 validation 성능</span>
+        </div>
+      </div>
+      <div class="callout good">
+        <strong>최종 선택 모델:</strong>
+        <code>ExtraTreesRegressor(n_estimators=1000, max_features=0.9, min_samples_leaf=1, bootstrap=False)</code>.
+        validation에서 고른 뒤 train+validation으로 재학습하고 test set을 한 번만 평가했습니다.
+      </div>
+      <div class="callout warn">
+        <strong>해석:</strong>
+        R2 0.2083은 평균 예측 baseline보다 낫고 PPG에 약한 예측 신호가 있음을 보여주지만,
+        강한 감정 예측 모델이라고 주장할 수준은 아닙니다. 제품 또는 임상 예측 주장에는 부족합니다.
+      </div>
+    </section>
+
+    <section>
+      <h2>Data And Feature Setup</h2>
+      <p>
+        이전 노트북 <code>notebooks/LLaMAC_PPG_Emotion_Prediction.ipynb</code>의 raw PPG rolling-window
+        접근을 바탕으로 별도 feature cache를 만들었습니다. 사용한 입력은 PPG 채널뿐이며,
+        EEG, GSR, respiration, stimulus identity, participant identity feature는 모델 입력에 넣지 않았습니다.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>항목</th>
+            <th>값</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Participants used</td><td>40</td></tr>
+          <tr><td>Trial groups</td><td>2,000</td></tr>
+          <tr><td>Rolling windows</td><td>12,178</td></tr>
+          <tr><td>PPG feature count</td><td>114</td></tr>
+          <tr><td>Window / step</td><td>30 sec / 5 sec</td></tr>
+          <tr><td>Sampling rate</td><td>64 Hz</td></tr>
+          <tr><td>Targets</td><td>Valence, Arousal, Dominance, Liking, Emotion_Intensity</td></tr>
+        </tbody>
+      </table>
+      <p class="small">
+        Feature families: heart-rate / IBI statistics, HRV summaries, amplitude morphology, waveform statistics,
+        derivative statistics, Welch spectral bands, and temporal segment summaries.
+      </p>
+    </section>
+
+    <section>
+      <h2>Experiment A: Window-random Sanity Check</h2>
+      <p>
+        먼저 window를 무작위 train/test로 나누는 optimistic sanity check를 수행했습니다.
+        이 방식은 같은 trial에서 나온 rolling window가 train과 test에 동시에 들어갈 수 있으므로
+        실제 일반화 성능으로 쓰면 안 됩니다.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Target</th>
+            <th>R2</th>
+            <th>RMSE</th>
+            <th>MAE</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Valence</td><td>0.6536</td><td>0.7740</td><td>0.6026</td></tr>
+          <tr><td>Arousal</td><td>0.6501</td><td>0.7600</td><td>0.5933</td></tr>
+          <tr><td>Dominance</td><td>0.6595</td><td>0.7979</td><td>0.6357</td></tr>
+          <tr><td>Liking</td><td>0.6282</td><td>0.4990</td><td>0.3975</td></tr>
+          <tr><td>Emotion_Intensity</td><td>0.6634</td><td>0.9796</td><td>0.7716</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn">
+        <strong>결론:</strong> 평균 R2 0.6510은 높은 수치지만, 같은 trial 내부 window leakage의 영향이 큽니다.
+        이 결과는 feature/model pipeline이 작동한다는 확인용으로만 사용했습니다.
+      </div>
+    </section>
+
+    <section>
+      <h2>Experiment B: Coherent Train / Validation / Test Split</h2>
+      <p>
+        정합 split에서는 group key를 <code>SubjectID + Trial</code>로 두었습니다.
+        같은 trial의 모든 rolling window는 train, validation, test 중 하나에만 들어갑니다.
+        모델 선택은 validation trial-level mean R2로 수행했고, test는 최종 선택 후 한 번만 평가했습니다.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Split</th>
+            <th>Rows</th>
+            <th>Trial groups</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Train</td><td>7,311</td><td>1,200</td></tr>
+          <tr><td>Validation</td><td>2,438</td><td>400</td></tr>
+          <tr><td>Test</td><td>2,429</td><td>400</td></tr>
+        </tbody>
+      </table>
+      <p class="small">
+        Overlap checks: train-validation = 0, train-test = 0, validation-test = 0.
+      </p>
+
+      <h3>Validation Leaderboard</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Validation mean R2</th>
+            <th>Validation min R2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>ExtraTrees_n1000_mf0.9_leaf1</td><td>0.1566</td><td>0.0920</td></tr>
+          <tr><td>ExtraTrees_n1000_mf0.7_leaf1</td><td>0.1557</td><td>0.0909</td></tr>
+          <tr><td>ExtraTrees_n600_mf0.7_leaf1</td><td>0.1554</td><td>0.0902</td></tr>
+          <tr><td>ExtraTrees_n600_mf0.9_leaf1</td><td>0.1554</td><td>0.0918</td></tr>
+          <tr><td>ExtraTrees_n300_mf0.9_leaf1</td><td>0.1554</td><td>0.0901</td></tr>
+          <tr><td>RandomForest_n500_mf0.7</td><td>0.1459</td><td>0.0926</td></tr>
+          <tr><td>LightGBM_1000_lr02_l127</td><td>0.1430</td><td>0.0629</td></tr>
+          <tr><td>XGBoost_800_d6</td><td>0.1350</td><td>0.0522</td></tr>
+          <tr><td>HistGB_700_lr02_leaf31</td><td>0.1298</td><td>0.0510</td></tr>
+        </tbody>
+      </table>
+      <p>
+        ExtraTrees가 상위권 대부분을 차지했습니다. RandomForest와 GBM 계열도 regression으로 비교했지만,
+        validation 기준으로 ExtraTrees가 가장 안정적으로 높았습니다.
+      </p>
+
+      <h3>Final Test Metrics</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Target</th>
+            <th>Trial-level R2</th>
+            <th>RMSE</th>
+            <th>MAE</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Valence</td><td>0.2400</td><td>1.1432</td><td>0.9678</td></tr>
+          <tr><td>Arousal</td><td>0.1882</td><td>1.2094</td><td>1.0076</td></tr>
+          <tr><td>Dominance</td><td>0.2184</td><td>1.2574</td><td>1.0619</td></tr>
+          <tr><td>Liking</td><td>0.1583</td><td>0.7494</td><td>0.6302</td></tr>
+          <tr><td>Emotion_Intensity</td><td>0.2366</td><td>1.5178</td><td>1.3069</td></tr>
+          <tr><td><strong>Mean</strong></td><td><strong>0.2083</strong></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Interpretation</h2>
+      <ul>
+        <li>PPG-only signal has measurable predictive information: coherent split R2 is above zero across all targets.</li>
+        <li>The effect size is modest: mean R2 0.2083 explains about 21% of held-out trial-level target variance.</li>
+        <li>The earlier R2 near 0.65 should not be used as a generalization claim because it comes from window-random splitting.</li>
+        <li>Among tested regressors, ExtraTrees is currently the best practical baseline for this PPG-only setup.</li>
+        <li>Participant-holdout evaluation is still expected to be harder and may reduce R2 further.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Reproducibility</h2>
+      <p>Primary notebooks:</p>
+      <ul>
+        <li><code>notebooks/LLaMAC_PPG_R2_Regression_Model.ipynb</code>: optimistic window-random R2 sanity check.</li>
+        <li><code>notebooks/LLaMAC_PPG_Coherent_Split_R2_Search.ipynb</code>: trial-grouped train / validation / test model search.</li>
+      </ul>
+      <p>Commands used for notebook verification:</p>
+      <pre><code>uv run --group ml jupyter nbconvert --to notebook --execute notebooks/LLaMAC_PPG_R2_Regression_Model.ipynb --output LLaMAC_PPG_R2_Regression_Model.executed.ipynb --ExecutePreprocessor.timeout=1200
+uv run --group ml jupyter nbconvert --to notebook --execute notebooks/LLaMAC_PPG_Coherent_Split_R2_Search.ipynb --output LLaMAC_PPG_Coherent_Split_R2_Search.executed.ipynb --ExecutePreprocessor.timeout=1200</code></pre>
+      <p>
+        Generated feature caches, summaries, and model pickle files are under <code>artifacts/</code>.
+        They are intentionally ignored by git because they are generated or large local artifacts.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
