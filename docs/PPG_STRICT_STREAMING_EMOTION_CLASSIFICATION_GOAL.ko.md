@@ -36,6 +36,35 @@ LLaMAC 데이터셋에서 PPG 단일 센서만 사용해 `ReportedType` 5-class 
 
 주의: 이전 trial-level tabular PPG 결과는 비교 참고용이지 primary production leaderboard가 아니다. 기존 trial-level PPG grouped 결과는 대략 top-1 0.22-0.26, top-3 0.62-0.66, macro F1 0.21-0.235 수준이었다. 이 값은 window-causal production 조건보다 느슨하다.
 
+## 2026-05-31 strict validation-search round
+
+실행:
+
+```bash
+uv run python scripts/evaluate_ppg_strict_emotion_search.py \
+  --device auto \
+  --tabular-device cpu \
+  --num-workers 4 \
+  --tabular-model-timeout-seconds 120
+```
+
+결과 artifact: ignored `artifacts/results/ppg_strict_emotion_search_result_20260531-113121.json`
+
+종료 사유: `target_reached_freeze`
+
+- evaluated candidates: 16
+- eligible candidates: 15
+- validation leader 갱신: 4회
+- LightGBM은 120초 timeout으로 실패 후보 처리
+- test는 selected top-1/top-3 leader에 대해서만 산출
+
+| Leaderboard | Selected model | Val top-1 | Val top-3 | Val macro F1 | Val kappa | Test top-1 | Test top-3 | Test macro F1 | Test kappa |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| top-1 | SVC-RBF + Logistic regression equal-prob ensemble | 0.2988 | 0.7087 | 0.2395 | 0.0705 | 0.2737 | 0.6775 | 0.2230 | 0.0527 |
+| top-3 | SVC-RBF + Logistic regression equal-prob ensemble | 0.2988 | 0.7087 | 0.2395 | 0.0705 | 0.2737 | 0.6775 | 0.2230 | 0.0527 |
+
+해석: top-1 test accuracy는 majority/prior baseline과 비슷하지만, top-3와 macro F1/kappa가 guard를 통과하므로 단순 majority collapse는 아니다. test를 본 뒤에는 이 round에서 hyperparameter, feature, ensemble weight를 더 수정하지 않는다.
+
 ## 후보군
 
 ### 1. Raw waveform DNN
@@ -50,6 +79,7 @@ LLaMAC 데이터셋에서 PPG 단일 센서만 사용해 `ReportedType` 5-class 
 ### 2. Window-level PPG feature + classical/tree model
 
 모든 feature는 해당 causal window 내부에서만 계산한다.
+Tree/tabular 후보는 기본 CPU에서 검증한다. XGBoost/CatBoost GPU는 native OOM이 Python 예외로 회수되지 않을 수 있으므로 명시 옵션일 때만 사용한다.
 
 - Logistic regression / calibrated linear model
 - SVC-RBF
@@ -89,6 +119,7 @@ Guard rule:
 무한 탐색을 막기 위해 다음 중 하나를 만족하면 현재 round를 종료한다.
 
 1. **후보 예산 도달**
+   - 전체 evaluated candidate 60개 도달. ineligible/collapse/실패 후보도 포함한다.
    - eligible candidate 40개 평가 완료.
    - 또는 DNN 20개 + tabular/tree/ensemble 20개 평가 완료.
 
@@ -96,16 +127,22 @@ Guard rule:
    - validation top-1과 top-3 어느 쪽도 `0.005` 이상 개선하지 못한 eligible candidate가 8개 연속 나오면 중단한다.
    - top-1 leaderboard와 top-3 leaderboard 중 하나라도 `0.005` 이상 개선되면 연속 미개선 카운트를 0으로 되돌린다.
 
-3. **시간 예산 도달**
+3. **개선 횟수 상한**
+   - 이번 round의 strict production 후보에서 validation leader 갱신이 5회 발생하면 남은 후보를 더 보지 않고 종료한다.
+   - full trial 전체 신호, 미래 window, 다중 window test aggregation, subject calibration 결과는 개선 횟수에 포함하지 않는다.
+
+4. **시간 예산 도달**
    - 단일 round의 총 GPU 학습 시간 24시간 도달.
    - 또는 실제 경과 시간 48시간 도달.
+   - lightweight validation search script는 기본 wall-clock 4시간을 넘기지 않는다.
+   - tabular/tree 단일 후보 fit은 기본 5분을 넘기지 않는다. timeout 후보는 실패 후보로 기록하고 다음 후보로 넘어간다.
 
-4. **목표치 도달 후 freeze**
+5. **목표치 도달 후 freeze**
    - validation top-1 `>= 0.30` 또는 validation top-3 `>= 0.70`을 달성하고,
    - validation macro F1 `>= 0.23`, kappa `> 0.04`를 동시에 만족하면,
    - 그 시점의 후보군으로 ensemble 검증 1회를 수행한 뒤 test를 freeze하고 round를 종료한다.
 
-5. **품질 중단**
+6. **품질 중단**
    - DNN 학습에서 NaN/inf가 2회 이상 재현되면 해당 설정 family를 중단한다.
    - validation 성능은 높지만 confusion matrix가 한두 class에 과도하게 몰리면 collapse 후보로 표시하고 leaderboard eligible에서 제외한다.
 
